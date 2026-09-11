@@ -1,6 +1,6 @@
 module github.com/ecodeclub/ai-gateway-go
 
-go 1.23.2
+go 1.24
 
 require (
 	github.com/cohesion-org/deepseek-go v1.2.7
@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	entgo.io/ent v0.14.6 // indirect
 	github.com/BurntSushi/toml v1.1.0 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/alibaba/sentinel-golang v1.0.3 // indirect
@@ -59,8 +60,8 @@ require (
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
 	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
