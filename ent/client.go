@@ -14,7 +14,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
-	"github.com/ecodeclub/ai-gateway-go/ent/intent"
+	"github.com/ecodeclub/ai-gateway-go/ent/intentrule"
 )
 
 // Client is the client that holds all ent builders.
@@ -22,8 +22,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
-	// Intent is the client for interacting with the Intent builders.
-	Intent *IntentClient
+	// IntentRule is the client for interacting with the IntentRule builders.
+	IntentRule *IntentRuleClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -35,7 +35,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
-	c.Intent = NewIntentClient(c.config)
+	c.IntentRule = NewIntentRuleClient(c.config)
 }
 
 type (
@@ -126,9 +126,9 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		Intent: NewIntentClient(cfg),
+		ctx:        ctx,
+		config:     cfg,
+		IntentRule: NewIntentRuleClient(cfg),
 	}, nil
 }
 
@@ -146,16 +146,16 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		Intent: NewIntentClient(cfg),
+		ctx:        ctx,
+		config:     cfg,
+		IntentRule: NewIntentRuleClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Intent.
+//		IntentRule.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -177,126 +177,126 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.Intent.Use(hooks...)
+	c.IntentRule.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
-	c.Intent.Intercept(interceptors...)
+	c.IntentRule.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
-	case *IntentMutation:
-		return c.Intent.mutate(ctx, m)
+	case *IntentRuleMutation:
+		return c.IntentRule.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
 }
 
-// IntentClient is a client for the Intent schema.
-type IntentClient struct {
+// IntentRuleClient is a client for the IntentRule schema.
+type IntentRuleClient struct {
 	config
 }
 
-// NewIntentClient returns a client for the Intent from the given config.
-func NewIntentClient(c config) *IntentClient {
-	return &IntentClient{config: c}
+// NewIntentRuleClient returns a client for the IntentRule from the given config.
+func NewIntentRuleClient(c config) *IntentRuleClient {
+	return &IntentRuleClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `intent.Hooks(f(g(h())))`.
-func (c *IntentClient) Use(hooks ...Hook) {
-	c.hooks.Intent = append(c.hooks.Intent, hooks...)
+// A call to `Use(f, g, h)` equals to `intentrule.Hooks(f(g(h())))`.
+func (c *IntentRuleClient) Use(hooks ...Hook) {
+	c.hooks.IntentRule = append(c.hooks.IntentRule, hooks...)
 }
 
 // Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `intent.Intercept(f(g(h())))`.
-func (c *IntentClient) Intercept(interceptors ...Interceptor) {
-	c.inters.Intent = append(c.inters.Intent, interceptors...)
+// A call to `Intercept(f, g, h)` equals to `intentrule.Intercept(f(g(h())))`.
+func (c *IntentRuleClient) Intercept(interceptors ...Interceptor) {
+	c.inters.IntentRule = append(c.inters.IntentRule, interceptors...)
 }
 
-// Create returns a builder for creating a Intent entity.
-func (c *IntentClient) Create() *IntentCreate {
-	mutation := newIntentMutation(c.config, OpCreate)
-	return &IntentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a IntentRule entity.
+func (c *IntentRuleClient) Create() *IntentRuleCreate {
+	mutation := newIntentRuleMutation(c.config, OpCreate)
+	return &IntentRuleCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of Intent entities.
-func (c *IntentClient) CreateBulk(builders ...*IntentCreate) *IntentCreateBulk {
-	return &IntentCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of IntentRule entities.
+func (c *IntentRuleClient) CreateBulk(builders ...*IntentRuleCreate) *IntentRuleCreateBulk {
+	return &IntentRuleCreateBulk{config: c.config, builders: builders}
 }
 
 // MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
 // a builder and applies setFunc on it.
-func (c *IntentClient) MapCreateBulk(slice any, setFunc func(*IntentCreate, int)) *IntentCreateBulk {
+func (c *IntentRuleClient) MapCreateBulk(slice any, setFunc func(*IntentRuleCreate, int)) *IntentRuleCreateBulk {
 	rv := reflect.ValueOf(slice)
 	if rv.Kind() != reflect.Slice {
-		return &IntentCreateBulk{err: fmt.Errorf("calling to IntentClient.MapCreateBulk with wrong type %T, need slice", slice)}
+		return &IntentRuleCreateBulk{err: fmt.Errorf("calling to IntentRuleClient.MapCreateBulk with wrong type %T, need slice", slice)}
 	}
-	builders := make([]*IntentCreate, rv.Len())
+	builders := make([]*IntentRuleCreate, rv.Len())
 	for i := 0; i < rv.Len(); i++ {
 		builders[i] = c.Create()
 		setFunc(builders[i], i)
 	}
-	return &IntentCreateBulk{config: c.config, builders: builders}
+	return &IntentRuleCreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for Intent.
-func (c *IntentClient) Update() *IntentUpdate {
-	mutation := newIntentMutation(c.config, OpUpdate)
-	return &IntentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for IntentRule.
+func (c *IntentRuleClient) Update() *IntentRuleUpdate {
+	mutation := newIntentRuleMutation(c.config, OpUpdate)
+	return &IntentRuleUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *IntentClient) UpdateOne(_m *Intent) *IntentUpdateOne {
-	mutation := newIntentMutation(c.config, OpUpdateOne, withIntent(_m))
-	return &IntentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *IntentRuleClient) UpdateOne(_m *IntentRule) *IntentRuleUpdateOne {
+	mutation := newIntentRuleMutation(c.config, OpUpdateOne, withIntentRule(_m))
+	return &IntentRuleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *IntentClient) UpdateOneID(id int) *IntentUpdateOne {
-	mutation := newIntentMutation(c.config, OpUpdateOne, withIntentID(id))
-	return &IntentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *IntentRuleClient) UpdateOneID(id uint64) *IntentRuleUpdateOne {
+	mutation := newIntentRuleMutation(c.config, OpUpdateOne, withIntentRuleID(id))
+	return &IntentRuleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for Intent.
-func (c *IntentClient) Delete() *IntentDelete {
-	mutation := newIntentMutation(c.config, OpDelete)
-	return &IntentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for IntentRule.
+func (c *IntentRuleClient) Delete() *IntentRuleDelete {
+	mutation := newIntentRuleMutation(c.config, OpDelete)
+	return &IntentRuleDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *IntentClient) DeleteOne(_m *Intent) *IntentDeleteOne {
+func (c *IntentRuleClient) DeleteOne(_m *IntentRule) *IntentRuleDeleteOne {
 	return c.DeleteOneID(_m.ID)
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *IntentClient) DeleteOneID(id int) *IntentDeleteOne {
-	builder := c.Delete().Where(intent.ID(id))
+func (c *IntentRuleClient) DeleteOneID(id uint64) *IntentRuleDeleteOne {
+	builder := c.Delete().Where(intentrule.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &IntentDeleteOne{builder}
+	return &IntentRuleDeleteOne{builder}
 }
 
-// Query returns a query builder for Intent.
-func (c *IntentClient) Query() *IntentQuery {
-	return &IntentQuery{
+// Query returns a query builder for IntentRule.
+func (c *IntentRuleClient) Query() *IntentRuleQuery {
+	return &IntentRuleQuery{
 		config: c.config,
-		ctx:    &QueryContext{Type: TypeIntent},
+		ctx:    &QueryContext{Type: TypeIntentRule},
 		inters: c.Interceptors(),
 	}
 }
 
-// Get returns a Intent entity by its id.
-func (c *IntentClient) Get(ctx context.Context, id int) (*Intent, error) {
-	return c.Query().Where(intent.ID(id)).Only(ctx)
+// Get returns a IntentRule entity by its id.
+func (c *IntentRuleClient) Get(ctx context.Context, id uint64) (*IntentRule, error) {
+	return c.Query().Where(intentrule.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *IntentClient) GetX(ctx context.Context, id int) *Intent {
+func (c *IntentRuleClient) GetX(ctx context.Context, id uint64) *IntentRule {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -305,36 +305,36 @@ func (c *IntentClient) GetX(ctx context.Context, id int) *Intent {
 }
 
 // Hooks returns the client hooks.
-func (c *IntentClient) Hooks() []Hook {
-	return c.hooks.Intent
+func (c *IntentRuleClient) Hooks() []Hook {
+	return c.hooks.IntentRule
 }
 
 // Interceptors returns the client interceptors.
-func (c *IntentClient) Interceptors() []Interceptor {
-	return c.inters.Intent
+func (c *IntentRuleClient) Interceptors() []Interceptor {
+	return c.inters.IntentRule
 }
 
-func (c *IntentClient) mutate(ctx context.Context, m *IntentMutation) (Value, error) {
+func (c *IntentRuleClient) mutate(ctx context.Context, m *IntentRuleMutation) (Value, error) {
 	switch m.Op() {
 	case OpCreate:
-		return (&IntentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&IntentRuleCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdate:
-		return (&IntentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&IntentRuleUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdateOne:
-		return (&IntentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&IntentRuleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpDelete, OpDeleteOne:
-		return (&IntentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+		return (&IntentRuleDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
-		return nil, fmt.Errorf("ent: unknown Intent mutation op: %q", m.Op())
+		return nil, fmt.Errorf("ent: unknown IntentRule mutation op: %q", m.Op())
 	}
 }
 
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Intent []ent.Hook
+		IntentRule []ent.Hook
 	}
 	inters struct {
-		Intent []ent.Interceptor
+		IntentRule []ent.Interceptor
 	}
 )

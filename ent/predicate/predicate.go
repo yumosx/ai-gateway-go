@@ -6,5 +6,5 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
-// Intent is the predicate function for intent builders.
-type Intent func(*sql.Selector)
+// IntentRule is the predicate function for intentrule builders.
+type IntentRule func(*sql.Selector)

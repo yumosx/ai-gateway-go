@@ -9,16 +9,16 @@ import (
 	"github.com/ecodeclub/ai-gateway-go/ent"
 )
 
-// The IntentFunc type is an adapter to allow the use of ordinary
-// function as Intent mutator.
-type IntentFunc func(context.Context, *ent.IntentMutation) (ent.Value, error)
+// The IntentRuleFunc type is an adapter to allow the use of ordinary
+// function as IntentRule mutator.
+type IntentRuleFunc func(context.Context, *ent.IntentRuleMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f IntentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.IntentMutation); ok {
+func (f IntentRuleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.IntentRuleMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IntentMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IntentRuleMutation", m)
 }
 
 // Condition is a hook condition function.

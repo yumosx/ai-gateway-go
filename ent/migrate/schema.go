@@ -3,26 +3,52 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
 
 var (
-	// IntentsColumns holds the columns for the "intents" table.
-	IntentsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+	// IntentRulesColumns holds the columns for the "intent_rules" table.
+	IntentRulesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint64, Increment: true},
+		{Name: "rule_id", Type: field.TypeString, Unique: true, Size: 64},
+		{Name: "intent_name", Type: field.TypeString, Size: 128},
+		{Name: "patterns", Type: field.TypeJSON},
+		{Name: "match_type", Type: field.TypeString, Size: 16, Default: "contains"},
+		{Name: "params", Type: field.TypeJSON, Nullable: true},
+		{Name: "priority", Type: field.TypeInt, Default: 0},
+		{Name: "confidence", Type: field.TypeFloat64, Default: 1},
+		{Name: "status", Type: field.TypeInt8, Default: 1},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
 	}
-	// IntentsTable holds the schema information for the "intents" table.
-	IntentsTable = &schema.Table{
-		Name:       "intents",
-		Columns:    IntentsColumns,
-		PrimaryKey: []*schema.Column{IntentsColumns[0]},
+	// IntentRulesTable holds the schema information for the "intent_rules" table.
+	IntentRulesTable = &schema.Table{
+		Name:       "intent_rules",
+		Columns:    IntentRulesColumns,
+		PrimaryKey: []*schema.Column{IntentRulesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "intentrule_intent_name",
+				Unique:  false,
+				Columns: []*schema.Column{IntentRulesColumns[2]},
+			},
+			{
+				Name:    "intentrule_status_priority",
+				Unique:  false,
+				Columns: []*schema.Column{IntentRulesColumns[8], IntentRulesColumns[6]},
+			},
+		},
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
-		IntentsTable,
+		IntentRulesTable,
 	}
 )
 
 func init() {
+	IntentRulesTable.Annotation = &entsql.Annotation{
+		Table: "intent_rules",
+	}
 }

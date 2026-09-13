@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/ecodeclub/ai-gateway-go/ent/intentrule"
 	"github.com/ecodeclub/ai-gateway-go/ent/predicate"
 )
 
@@ -22,32 +24,46 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeIntent = "Intent"
+	TypeIntentRule = "IntentRule"
 )
 
-// IntentMutation represents an operation that mutates the Intent nodes in the graph.
-type IntentMutation struct {
+// IntentRuleMutation represents an operation that mutates the IntentRule nodes in the graph.
+type IntentRuleMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *int
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*Intent, error)
-	predicates    []predicate.Intent
+	op             Op
+	typ            string
+	id             *uint64
+	rule_id        *string
+	intent_name    *string
+	patterns       *[]string
+	appendpatterns []string
+	match_type     *string
+	params         *map[string]string
+	priority       *int
+	addpriority    *int
+	confidence     *float64
+	addconfidence  *float64
+	status         *int8
+	addstatus      *int8
+	created_at     *time.Time
+	updated_at     *time.Time
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*IntentRule, error)
+	predicates     []predicate.IntentRule
 }
 
-var _ ent.Mutation = (*IntentMutation)(nil)
+var _ ent.Mutation = (*IntentRuleMutation)(nil)
 
-// intentOption allows management of the mutation configuration using functional options.
-type intentOption func(*IntentMutation)
+// intentruleOption allows management of the mutation configuration using functional options.
+type intentruleOption func(*IntentRuleMutation)
 
-// newIntentMutation creates new mutation for the Intent entity.
-func newIntentMutation(c config, op Op, opts ...intentOption) *IntentMutation {
-	m := &IntentMutation{
+// newIntentRuleMutation creates new mutation for the IntentRule entity.
+func newIntentRuleMutation(c config, op Op, opts ...intentruleOption) *IntentRuleMutation {
+	m := &IntentRuleMutation{
 		config:        c,
 		op:            op,
-		typ:           TypeIntent,
+		typ:           TypeIntentRule,
 		clearedFields: make(map[string]struct{}),
 	}
 	for _, opt := range opts {
@@ -56,20 +72,20 @@ func newIntentMutation(c config, op Op, opts ...intentOption) *IntentMutation {
 	return m
 }
 
-// withIntentID sets the ID field of the mutation.
-func withIntentID(id int) intentOption {
-	return func(m *IntentMutation) {
+// withIntentRuleID sets the ID field of the mutation.
+func withIntentRuleID(id uint64) intentruleOption {
+	return func(m *IntentRuleMutation) {
 		var (
 			err   error
 			once  sync.Once
-			value *Intent
+			value *IntentRule
 		)
-		m.oldValue = func(ctx context.Context) (*Intent, error) {
+		m.oldValue = func(ctx context.Context) (*IntentRule, error) {
 			once.Do(func() {
 				if m.done {
 					err = errors.New("querying old values post mutation is not allowed")
 				} else {
-					value, err = m.Client().Intent.Get(ctx, id)
+					value, err = m.Client().IntentRule.Get(ctx, id)
 				}
 			})
 			return value, err
@@ -78,10 +94,10 @@ func withIntentID(id int) intentOption {
 	}
 }
 
-// withIntent sets the old Intent of the mutation.
-func withIntent(node *Intent) intentOption {
-	return func(m *IntentMutation) {
-		m.oldValue = func(context.Context) (*Intent, error) {
+// withIntentRule sets the old IntentRule of the mutation.
+func withIntentRule(node *IntentRule) intentruleOption {
+	return func(m *IntentRuleMutation) {
+		m.oldValue = func(context.Context) (*IntentRule, error) {
 			return node, nil
 		}
 		m.id = &node.ID
@@ -90,7 +106,7 @@ func withIntent(node *Intent) intentOption {
 
 // Client returns a new `ent.Client` from the mutation. If the mutation was
 // executed in a transaction (ent.Tx), a transactional client is returned.
-func (m IntentMutation) Client() *Client {
+func (m IntentRuleMutation) Client() *Client {
 	client := &Client{config: m.config}
 	client.init()
 	return client
@@ -98,7 +114,7 @@ func (m IntentMutation) Client() *Client {
 
 // Tx returns an `ent.Tx` for mutations that were executed in transactions;
 // it returns an error otherwise.
-func (m IntentMutation) Tx() (*Tx, error) {
+func (m IntentRuleMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
 		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
@@ -107,9 +123,15 @@ func (m IntentMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of IntentRule entities.
+func (m *IntentRuleMutation) SetID(id uint64) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *IntentMutation) ID() (id int, exists bool) {
+func (m *IntentRuleMutation) ID() (id uint64, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -120,30 +142,478 @@ func (m *IntentMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *IntentMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *IntentRuleMutation) IDs(ctx context.Context) ([]uint64, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uint64{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().Intent.Query().Where(m.predicates...).IDs(ctx)
+		return m.Client().IntentRule.Query().Where(m.predicates...).IDs(ctx)
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
 }
 
-// Where appends a list predicates to the IntentMutation builder.
-func (m *IntentMutation) Where(ps ...predicate.Intent) {
+// SetRuleID sets the "rule_id" field.
+func (m *IntentRuleMutation) SetRuleID(s string) {
+	m.rule_id = &s
+}
+
+// RuleID returns the value of the "rule_id" field in the mutation.
+func (m *IntentRuleMutation) RuleID() (r string, exists bool) {
+	v := m.rule_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRuleID returns the old "rule_id" field's value of the IntentRule entity.
+// If the IntentRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntentRuleMutation) OldRuleID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRuleID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRuleID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRuleID: %w", err)
+	}
+	return oldValue.RuleID, nil
+}
+
+// ResetRuleID resets all changes to the "rule_id" field.
+func (m *IntentRuleMutation) ResetRuleID() {
+	m.rule_id = nil
+}
+
+// SetIntentName sets the "intent_name" field.
+func (m *IntentRuleMutation) SetIntentName(s string) {
+	m.intent_name = &s
+}
+
+// IntentName returns the value of the "intent_name" field in the mutation.
+func (m *IntentRuleMutation) IntentName() (r string, exists bool) {
+	v := m.intent_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIntentName returns the old "intent_name" field's value of the IntentRule entity.
+// If the IntentRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntentRuleMutation) OldIntentName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIntentName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIntentName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIntentName: %w", err)
+	}
+	return oldValue.IntentName, nil
+}
+
+// ResetIntentName resets all changes to the "intent_name" field.
+func (m *IntentRuleMutation) ResetIntentName() {
+	m.intent_name = nil
+}
+
+// SetPatterns sets the "patterns" field.
+func (m *IntentRuleMutation) SetPatterns(s []string) {
+	m.patterns = &s
+	m.appendpatterns = nil
+}
+
+// Patterns returns the value of the "patterns" field in the mutation.
+func (m *IntentRuleMutation) Patterns() (r []string, exists bool) {
+	v := m.patterns
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPatterns returns the old "patterns" field's value of the IntentRule entity.
+// If the IntentRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntentRuleMutation) OldPatterns(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPatterns is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPatterns requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPatterns: %w", err)
+	}
+	return oldValue.Patterns, nil
+}
+
+// AppendPatterns adds s to the "patterns" field.
+func (m *IntentRuleMutation) AppendPatterns(s []string) {
+	m.appendpatterns = append(m.appendpatterns, s...)
+}
+
+// AppendedPatterns returns the list of values that were appended to the "patterns" field in this mutation.
+func (m *IntentRuleMutation) AppendedPatterns() ([]string, bool) {
+	if len(m.appendpatterns) == 0 {
+		return nil, false
+	}
+	return m.appendpatterns, true
+}
+
+// ResetPatterns resets all changes to the "patterns" field.
+func (m *IntentRuleMutation) ResetPatterns() {
+	m.patterns = nil
+	m.appendpatterns = nil
+}
+
+// SetMatchType sets the "match_type" field.
+func (m *IntentRuleMutation) SetMatchType(s string) {
+	m.match_type = &s
+}
+
+// MatchType returns the value of the "match_type" field in the mutation.
+func (m *IntentRuleMutation) MatchType() (r string, exists bool) {
+	v := m.match_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMatchType returns the old "match_type" field's value of the IntentRule entity.
+// If the IntentRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntentRuleMutation) OldMatchType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMatchType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMatchType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMatchType: %w", err)
+	}
+	return oldValue.MatchType, nil
+}
+
+// ResetMatchType resets all changes to the "match_type" field.
+func (m *IntentRuleMutation) ResetMatchType() {
+	m.match_type = nil
+}
+
+// SetParams sets the "params" field.
+func (m *IntentRuleMutation) SetParams(value map[string]string) {
+	m.params = &value
+}
+
+// Params returns the value of the "params" field in the mutation.
+func (m *IntentRuleMutation) Params() (r map[string]string, exists bool) {
+	v := m.params
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParams returns the old "params" field's value of the IntentRule entity.
+// If the IntentRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntentRuleMutation) OldParams(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParams is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParams requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParams: %w", err)
+	}
+	return oldValue.Params, nil
+}
+
+// ClearParams clears the value of the "params" field.
+func (m *IntentRuleMutation) ClearParams() {
+	m.params = nil
+	m.clearedFields[intentrule.FieldParams] = struct{}{}
+}
+
+// ParamsCleared returns if the "params" field was cleared in this mutation.
+func (m *IntentRuleMutation) ParamsCleared() bool {
+	_, ok := m.clearedFields[intentrule.FieldParams]
+	return ok
+}
+
+// ResetParams resets all changes to the "params" field.
+func (m *IntentRuleMutation) ResetParams() {
+	m.params = nil
+	delete(m.clearedFields, intentrule.FieldParams)
+}
+
+// SetPriority sets the "priority" field.
+func (m *IntentRuleMutation) SetPriority(i int) {
+	m.priority = &i
+	m.addpriority = nil
+}
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *IntentRuleMutation) Priority() (r int, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPriority returns the old "priority" field's value of the IntentRule entity.
+// If the IntentRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntentRuleMutation) OldPriority(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+	}
+	return oldValue.Priority, nil
+}
+
+// AddPriority adds i to the "priority" field.
+func (m *IntentRuleMutation) AddPriority(i int) {
+	if m.addpriority != nil {
+		*m.addpriority += i
+	} else {
+		m.addpriority = &i
+	}
+}
+
+// AddedPriority returns the value that was added to the "priority" field in this mutation.
+func (m *IntentRuleMutation) AddedPriority() (r int, exists bool) {
+	v := m.addpriority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *IntentRuleMutation) ResetPriority() {
+	m.priority = nil
+	m.addpriority = nil
+}
+
+// SetConfidence sets the "confidence" field.
+func (m *IntentRuleMutation) SetConfidence(f float64) {
+	m.confidence = &f
+	m.addconfidence = nil
+}
+
+// Confidence returns the value of the "confidence" field in the mutation.
+func (m *IntentRuleMutation) Confidence() (r float64, exists bool) {
+	v := m.confidence
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldConfidence returns the old "confidence" field's value of the IntentRule entity.
+// If the IntentRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntentRuleMutation) OldConfidence(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldConfidence is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldConfidence requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldConfidence: %w", err)
+	}
+	return oldValue.Confidence, nil
+}
+
+// AddConfidence adds f to the "confidence" field.
+func (m *IntentRuleMutation) AddConfidence(f float64) {
+	if m.addconfidence != nil {
+		*m.addconfidence += f
+	} else {
+		m.addconfidence = &f
+	}
+}
+
+// AddedConfidence returns the value that was added to the "confidence" field in this mutation.
+func (m *IntentRuleMutation) AddedConfidence() (r float64, exists bool) {
+	v := m.addconfidence
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetConfidence resets all changes to the "confidence" field.
+func (m *IntentRuleMutation) ResetConfidence() {
+	m.confidence = nil
+	m.addconfidence = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *IntentRuleMutation) SetStatus(i int8) {
+	m.status = &i
+	m.addstatus = nil
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *IntentRuleMutation) Status() (r int8, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the IntentRule entity.
+// If the IntentRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntentRuleMutation) OldStatus(ctx context.Context) (v int8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// AddStatus adds i to the "status" field.
+func (m *IntentRuleMutation) AddStatus(i int8) {
+	if m.addstatus != nil {
+		*m.addstatus += i
+	} else {
+		m.addstatus = &i
+	}
+}
+
+// AddedStatus returns the value that was added to the "status" field in this mutation.
+func (m *IntentRuleMutation) AddedStatus() (r int8, exists bool) {
+	v := m.addstatus
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *IntentRuleMutation) ResetStatus() {
+	m.status = nil
+	m.addstatus = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *IntentRuleMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *IntentRuleMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the IntentRule entity.
+// If the IntentRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntentRuleMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *IntentRuleMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *IntentRuleMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *IntentRuleMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the IntentRule entity.
+// If the IntentRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IntentRuleMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *IntentRuleMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the IntentRuleMutation builder.
+func (m *IntentRuleMutation) Where(ps ...predicate.IntentRule) {
 	m.predicates = append(m.predicates, ps...)
 }
 
-// WhereP appends storage-level predicates to the IntentMutation builder. Using this method,
+// WhereP appends storage-level predicates to the IntentRuleMutation builder. Using this method,
 // users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *IntentMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.Intent, len(ps))
+func (m *IntentRuleMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.IntentRule, len(ps))
 	for i := range ps {
 		p[i] = ps[i]
 	}
@@ -151,140 +621,366 @@ func (m *IntentMutation) WhereP(ps ...func(*sql.Selector)) {
 }
 
 // Op returns the operation name.
-func (m *IntentMutation) Op() Op {
+func (m *IntentRuleMutation) Op() Op {
 	return m.op
 }
 
 // SetOp allows setting the mutation operation.
-func (m *IntentMutation) SetOp(op Op) {
+func (m *IntentRuleMutation) SetOp(op Op) {
 	m.op = op
 }
 
-// Type returns the node type of this mutation (Intent).
-func (m *IntentMutation) Type() string {
+// Type returns the node type of this mutation (IntentRule).
+func (m *IntentRuleMutation) Type() string {
 	return m.typ
 }
 
 // Fields returns all fields that were changed during this mutation. Note that in
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
-func (m *IntentMutation) Fields() []string {
-	fields := make([]string, 0, 0)
+func (m *IntentRuleMutation) Fields() []string {
+	fields := make([]string, 0, 10)
+	if m.rule_id != nil {
+		fields = append(fields, intentrule.FieldRuleID)
+	}
+	if m.intent_name != nil {
+		fields = append(fields, intentrule.FieldIntentName)
+	}
+	if m.patterns != nil {
+		fields = append(fields, intentrule.FieldPatterns)
+	}
+	if m.match_type != nil {
+		fields = append(fields, intentrule.FieldMatchType)
+	}
+	if m.params != nil {
+		fields = append(fields, intentrule.FieldParams)
+	}
+	if m.priority != nil {
+		fields = append(fields, intentrule.FieldPriority)
+	}
+	if m.confidence != nil {
+		fields = append(fields, intentrule.FieldConfidence)
+	}
+	if m.status != nil {
+		fields = append(fields, intentrule.FieldStatus)
+	}
+	if m.created_at != nil {
+		fields = append(fields, intentrule.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, intentrule.FieldUpdatedAt)
+	}
 	return fields
 }
 
 // Field returns the value of a field with the given name. The second boolean
 // return value indicates that this field was not set, or was not defined in the
 // schema.
-func (m *IntentMutation) Field(name string) (ent.Value, bool) {
+func (m *IntentRuleMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case intentrule.FieldRuleID:
+		return m.RuleID()
+	case intentrule.FieldIntentName:
+		return m.IntentName()
+	case intentrule.FieldPatterns:
+		return m.Patterns()
+	case intentrule.FieldMatchType:
+		return m.MatchType()
+	case intentrule.FieldParams:
+		return m.Params()
+	case intentrule.FieldPriority:
+		return m.Priority()
+	case intentrule.FieldConfidence:
+		return m.Confidence()
+	case intentrule.FieldStatus:
+		return m.Status()
+	case intentrule.FieldCreatedAt:
+		return m.CreatedAt()
+	case intentrule.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
 	return nil, false
 }
 
 // OldField returns the old value of the field from the database. An error is
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
-func (m *IntentMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	return nil, fmt.Errorf("unknown Intent field %s", name)
+func (m *IntentRuleMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case intentrule.FieldRuleID:
+		return m.OldRuleID(ctx)
+	case intentrule.FieldIntentName:
+		return m.OldIntentName(ctx)
+	case intentrule.FieldPatterns:
+		return m.OldPatterns(ctx)
+	case intentrule.FieldMatchType:
+		return m.OldMatchType(ctx)
+	case intentrule.FieldParams:
+		return m.OldParams(ctx)
+	case intentrule.FieldPriority:
+		return m.OldPriority(ctx)
+	case intentrule.FieldConfidence:
+		return m.OldConfidence(ctx)
+	case intentrule.FieldStatus:
+		return m.OldStatus(ctx)
+	case intentrule.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case intentrule.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown IntentRule field %s", name)
 }
 
 // SetField sets the value of a field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *IntentMutation) SetField(name string, value ent.Value) error {
+func (m *IntentRuleMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case intentrule.FieldRuleID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRuleID(v)
+		return nil
+	case intentrule.FieldIntentName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIntentName(v)
+		return nil
+	case intentrule.FieldPatterns:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPatterns(v)
+		return nil
+	case intentrule.FieldMatchType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMatchType(v)
+		return nil
+	case intentrule.FieldParams:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParams(v)
+		return nil
+	case intentrule.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPriority(v)
+		return nil
+	case intentrule.FieldConfidence:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetConfidence(v)
+		return nil
+	case intentrule.FieldStatus:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case intentrule.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case intentrule.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
 	}
-	return fmt.Errorf("unknown Intent field %s", name)
+	return fmt.Errorf("unknown IntentRule field %s", name)
 }
 
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
-func (m *IntentMutation) AddedFields() []string {
-	return nil
+func (m *IntentRuleMutation) AddedFields() []string {
+	var fields []string
+	if m.addpriority != nil {
+		fields = append(fields, intentrule.FieldPriority)
+	}
+	if m.addconfidence != nil {
+		fields = append(fields, intentrule.FieldConfidence)
+	}
+	if m.addstatus != nil {
+		fields = append(fields, intentrule.FieldStatus)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
-func (m *IntentMutation) AddedField(name string) (ent.Value, bool) {
+func (m *IntentRuleMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case intentrule.FieldPriority:
+		return m.AddedPriority()
+	case intentrule.FieldConfidence:
+		return m.AddedConfidence()
+	case intentrule.FieldStatus:
+		return m.AddedStatus()
+	}
 	return nil, false
 }
 
 // AddField adds the value to the field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *IntentMutation) AddField(name string, value ent.Value) error {
-	return fmt.Errorf("unknown Intent numeric field %s", name)
+func (m *IntentRuleMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case intentrule.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPriority(v)
+		return nil
+	case intentrule.FieldConfidence:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddConfidence(v)
+		return nil
+	case intentrule.FieldStatus:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddStatus(v)
+		return nil
+	}
+	return fmt.Errorf("unknown IntentRule numeric field %s", name)
 }
 
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
-func (m *IntentMutation) ClearedFields() []string {
-	return nil
+func (m *IntentRuleMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(intentrule.FieldParams) {
+		fields = append(fields, intentrule.FieldParams)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
 // cleared in this mutation.
-func (m *IntentMutation) FieldCleared(name string) bool {
+func (m *IntentRuleMutation) FieldCleared(name string) bool {
 	_, ok := m.clearedFields[name]
 	return ok
 }
 
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
-func (m *IntentMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown Intent nullable field %s", name)
+func (m *IntentRuleMutation) ClearField(name string) error {
+	switch name {
+	case intentrule.FieldParams:
+		m.ClearParams()
+		return nil
+	}
+	return fmt.Errorf("unknown IntentRule nullable field %s", name)
 }
 
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
-func (m *IntentMutation) ResetField(name string) error {
-	return fmt.Errorf("unknown Intent field %s", name)
+func (m *IntentRuleMutation) ResetField(name string) error {
+	switch name {
+	case intentrule.FieldRuleID:
+		m.ResetRuleID()
+		return nil
+	case intentrule.FieldIntentName:
+		m.ResetIntentName()
+		return nil
+	case intentrule.FieldPatterns:
+		m.ResetPatterns()
+		return nil
+	case intentrule.FieldMatchType:
+		m.ResetMatchType()
+		return nil
+	case intentrule.FieldParams:
+		m.ResetParams()
+		return nil
+	case intentrule.FieldPriority:
+		m.ResetPriority()
+		return nil
+	case intentrule.FieldConfidence:
+		m.ResetConfidence()
+		return nil
+	case intentrule.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case intentrule.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case intentrule.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown IntentRule field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
-func (m *IntentMutation) AddedEdges() []string {
+func (m *IntentRuleMutation) AddedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
-func (m *IntentMutation) AddedIDs(name string) []ent.Value {
+func (m *IntentRuleMutation) AddedIDs(name string) []ent.Value {
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
-func (m *IntentMutation) RemovedEdges() []string {
+func (m *IntentRuleMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
-func (m *IntentMutation) RemovedIDs(name string) []ent.Value {
+func (m *IntentRuleMutation) RemovedIDs(name string) []ent.Value {
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *IntentMutation) ClearedEdges() []string {
+func (m *IntentRuleMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
-func (m *IntentMutation) EdgeCleared(name string) bool {
+func (m *IntentRuleMutation) EdgeCleared(name string) bool {
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
-func (m *IntentMutation) ClearEdge(name string) error {
-	return fmt.Errorf("unknown Intent unique edge %s", name)
+func (m *IntentRuleMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown IntentRule unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
-func (m *IntentMutation) ResetEdge(name string) error {
-	return fmt.Errorf("unknown Intent edge %s", name)
+func (m *IntentRuleMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown IntentRule edge %s", name)
 }

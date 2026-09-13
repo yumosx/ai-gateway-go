@@ -1,5 +1,17 @@
+[http]
+    addr = ":8080"
+
+[mysql]
+    dsn = "root:@tcp(127.0.0.1:3306)/ai_gateway?charset=utf8mb4&parseTime=True&loc=Local"
+    max_open_conns = 100
+    max_idle_conns = 10
+    conn_max_lifetime = 300
+
+[redis]
+    addr = "127.0.0.1:6379"
+    password = ""
+    db = 0
+    pool_size = 200
+
 [deepseek]
     token = ""
-[grpc.server]
-    host="127.0.0.1"
-    port=9002

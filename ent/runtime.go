@@ -2,8 +2,57 @@
 
 package ent
 
+import (
+	"time"
+
+	"github.com/ecodeclub/ai-gateway-go/ent/intentrule"
+	"github.com/ecodeclub/ai-gateway-go/ent/schema"
+)
+
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	intentruleFields := schema.IntentRule{}.Fields()
+	_ = intentruleFields
+	// intentruleDescRuleID is the schema descriptor for rule_id field.
+	intentruleDescRuleID := intentruleFields[1].Descriptor()
+	// intentrule.RuleIDValidator is a validator for the "rule_id" field. It is called by the builders before save.
+	intentrule.RuleIDValidator = intentruleDescRuleID.Validators[0].(func(string) error)
+	// intentruleDescIntentName is the schema descriptor for intent_name field.
+	intentruleDescIntentName := intentruleFields[2].Descriptor()
+	// intentrule.IntentNameValidator is a validator for the "intent_name" field. It is called by the builders before save.
+	intentrule.IntentNameValidator = intentruleDescIntentName.Validators[0].(func(string) error)
+	// intentruleDescMatchType is the schema descriptor for match_type field.
+	intentruleDescMatchType := intentruleFields[4].Descriptor()
+	// intentrule.DefaultMatchType holds the default value on creation for the match_type field.
+	intentrule.DefaultMatchType = intentruleDescMatchType.Default.(string)
+	// intentrule.MatchTypeValidator is a validator for the "match_type" field. It is called by the builders before save.
+	intentrule.MatchTypeValidator = intentruleDescMatchType.Validators[0].(func(string) error)
+	// intentruleDescPriority is the schema descriptor for priority field.
+	intentruleDescPriority := intentruleFields[6].Descriptor()
+	// intentrule.DefaultPriority holds the default value on creation for the priority field.
+	intentrule.DefaultPriority = intentruleDescPriority.Default.(int)
+	// intentruleDescConfidence is the schema descriptor for confidence field.
+	intentruleDescConfidence := intentruleFields[7].Descriptor()
+	// intentrule.DefaultConfidence holds the default value on creation for the confidence field.
+	intentrule.DefaultConfidence = intentruleDescConfidence.Default.(float64)
+	// intentruleDescStatus is the schema descriptor for status field.
+	intentruleDescStatus := intentruleFields[8].Descriptor()
+	// intentrule.DefaultStatus holds the default value on creation for the status field.
+	intentrule.DefaultStatus = intentruleDescStatus.Default.(int8)
+	// intentruleDescCreatedAt is the schema descriptor for created_at field.
+	intentruleDescCreatedAt := intentruleFields[9].Descriptor()
+	// intentrule.DefaultCreatedAt holds the default value on creation for the created_at field.
+	intentrule.DefaultCreatedAt = intentruleDescCreatedAt.Default.(func() time.Time)
+	// intentruleDescUpdatedAt is the schema descriptor for updated_at field.
+	intentruleDescUpdatedAt := intentruleFields[10].Descriptor()
+	// intentrule.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	intentrule.DefaultUpdatedAt = intentruleDescUpdatedAt.Default.(func() time.Time)
+	// intentrule.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	intentrule.UpdateDefaultUpdatedAt = intentruleDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// intentruleDescID is the schema descriptor for id field.
+	intentruleDescID := intentruleFields[0].Descriptor()
+	// intentrule.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	intentrule.IDValidator = intentruleDescID.Validators[0].(func(uint64) error)
 }
